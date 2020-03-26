@@ -84,10 +84,6 @@ public class BaseTest
     driver.quit();
   }
 
-  public void eyesCheck() {
-    eyesCheck(null);
-  }
-
   @BeforeMethod
   public void onTestStart(Method m, ITestContext ctx) {
     if (!eyes.getIsDisabled() && eyes.getBatch() == null) {
@@ -129,5 +125,9 @@ public class BaseTest
       eyes.open(remoteDriver, APPLICATION_NAME, testName, new RectangleSize(800, 600));
     }
     eyes.check(tag, Target.window());
+  }
+
+  public void eyesCheck() {
+    eyesCheck(null);
   }
 }
