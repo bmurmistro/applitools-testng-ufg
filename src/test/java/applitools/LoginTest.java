@@ -8,7 +8,7 @@ public class LoginTest
     extends BaseTest
 {
   @Test
-  public void testLogin() {
+  public void testLogin() throws InterruptedException {
     open("http://demo.applitools.com/loginBefore.html");
 
     eyesCheck();

@@ -23,7 +23,7 @@
         <version>3.0.0-M5</version>
         <configuration>
           <parallel>methods</parallel>
-          <threadCount>10</threadCount>
+          <threadCount>3</threadCount>
 <!--          <suiteXmlFiles>
             <suiteXmlFile>
               src\test\resources\testng.xml
@@ -35,9 +35,14 @@
   </build>
   <dependencies>
     <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>25.0-jre</version>
+    </dependency>
+    <dependency>
       <groupId>com.applitools</groupId>
       <artifactId>eyes-selenium-java3</artifactId>
-      <version>3.164.0</version>
+      <version>3.191.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>

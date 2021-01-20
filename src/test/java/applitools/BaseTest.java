@@ -4,30 +4,26 @@ import java.lang.reflect.Method;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 import com.applitools.ICheckSettings;
 import com.applitools.eyes.BatchInfo;
 import com.applitools.eyes.RectangleSize;
 import com.applitools.eyes.StdoutLogHandler;
-import com.applitools.eyes.TestResultContainer;
 import com.applitools.eyes.TestResultsSummary;
 import com.applitools.eyes.selenium.BrowserType;
 import com.applitools.eyes.selenium.Eyes;
+import com.applitools.eyes.selenium.StitchMode;
 import com.applitools.eyes.selenium.fluent.Target;
 import com.applitools.eyes.visualgrid.model.DeviceName;
 import com.applitools.eyes.visualgrid.services.VisualGridRunner;
 import com.codeborne.selenide.Configuration;
 import com.codeborne.selenide.WebDriverRunner;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WrapsDriver;
 import org.testng.ITestContext;
-import org.testng.ITestResult;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.AfterSuite;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
 public class BaseTest
@@ -45,65 +41,32 @@ public class BaseTest
 
   protected WebDriver driver;
 
+  //private static EyesWrapper eyesWrapper;
+  private static ThreadLocal<EyesWrapper> myEyesWrapper = ThreadLocal.withInitial(() -> {
+    Eyes eyes = new Eyes(runner);
+    eyes.setConfiguration(getConfiguation());
+    EyesWrapper eyesWrapper = new EyesWrapper(eyes, runner);
 
-  private static String localBranchName;
-  
+    return eyesWrapper;
+  });
   static {
     String buildNumber = System.getenv("BUILD_NUMBER");
     batch = new BatchInfo((buildNumber != null ? "#" + buildNumber : dateFormat.format(new Date())));
-    //BatchInfo batchInfo = new BatchInfo(System.getenv("APPLITOOLS_BATCH_ID"));
     // If the test runs via TeamCity, set the batch ID accordingly.
     String batchId = System.getenv("APPLITOOLS_BATCH_ID");
     if (batchId != null) {
       batch.setId(batchId);
     }
   }
-  
-  private ThreadLocal<Eyes> myEyes = ThreadLocal.withInitial(() -> {
-    Eyes eyes = new Eyes(runner);
-    localBranchName = System.getProperty("branchName", System.getenv("GIT_BRANCH_NAME"));
-    if (localBranchName == null) {
-      localBranchName = "default";
-    }
-    eyes.setIsDisabled(APPLITOOLS_KEY == null);
-
-    if (!eyes.getIsDisabled()) {
-      
-      eyes.setBatch(batch);
-      eyes.setApiKey(APPLITOOLS_KEY);
-  
-      //eyes.setLogHandler(new StdoutLogHandler(true));
-      eyes.setConfiguration(getConfiguation());
-      eyes.setApiKey(APPLITOOLS_KEY);
-      //eyes.setBatch(batch);
-
-      //eyes.setBranchName(localBranchName);
-
-      // For local testing or ci runs with master set the branchName and parentBranchName
-      if ((batch.getId() != null && "master".equalsIgnoreCase(localBranchName)) || batch.getId() == null) {
-        eyes.setBranchName(
-            localBranchName.equalsIgnoreCase("master") ? "bmurmistro/applitools-junit/master" : localBranchName);
-        eyes.setParentBranchName("default");
-      }
-      eyes.setIgnoreCaret(true);
-    }
-    //eyes.setLogHandler(new StdoutLogHandler(true));
-    return eyes;
-  });
 
   private static ThreadLocal<String> testName = new ThreadLocal<>();
-  
-  public Eyes getEyes() {
-    return myEyes.get();
+
+  public EyesWrapper getEyesWrapper() {
+    return myEyesWrapper.get();
   }
 
   @BeforeMethod
   public void onTestStart(Method m, ITestContext ctx) {
-    /*if (!eyes.getIsDisabled() && eyes.getBatch() == null) {
-      throw new IllegalArgumentException(
-          "The branchName parameter or the Bamboo environment variables are required if visual testing is enabled " +
-              "(the applitoolsKey property is provided).");
-    }*/
     long id = Thread.currentThread().getId();
     System.out.println("Before test-method. Thread id is: " + id);
     Configuration.browser = "chrome";
@@ -114,29 +77,30 @@ public class BaseTest
 
   @AfterMethod
   public void onTestFinish() {
-    Eyes eyes = getEyes();
-    if (eyes != null) {
-      try {
-        // End visual testing. Validate visual correctness.
-        if (eyes.getIsOpen()) {
-          eyes.closeAsync();
-        }
-      }
-      catch (Exception e) {
-        e.printStackTrace();
-      }
-      finally {
-        // Abort test in case of an unexpected error.
-        eyes.abortAsync();
-        driver.quit();
+    EyesWrapper eyesWrapper = getEyesWrapper();
+    Eyes eyes = eyesWrapper.getEyes();
+    try {
+      // End visual testing. Validate visual correctness.
+      if (getEyesWrapper().isOpenRequested()) {
+        eyes.closeAsync();
       }
     }
-    
+    catch (Exception e) {
+      e.printStackTrace();
+    }
+    finally {
+      eyesWrapper.setOpenRequested(false);
+      // Abort test in case of an unexpected error.
+      eyes.abortAsync();
+      //driver.quit();
+    }
   }
   
   @AfterSuite
   public void afterSuite(ITestContext context) {
-    TestResultsSummary allTestResults = runner.getAllTestResults();
+    TestResultsSummary results = runner.getAllTestResults(false);
+    System.out.println(results);
+    driver.quit();
   }
 
   public void eyesCheck(ICheckSettings settings) {
@@ -149,15 +113,16 @@ public class BaseTest
    * @param tag or step name of the validation
    */
   public void eyesCheck(String tag, ICheckSettings settings) {
-    Eyes eyes = getEyes();
-    if (!eyes.getIsOpen()) {
-      WebDriver remoteDriver = WebDriverRunner.getAndCheckWebDriver();
+    EyesWrapper eyesWrapper = getEyesWrapper();
+    Eyes eyes = eyesWrapper.getEyes();
 
+    if (!eyesWrapper.isOpenRequested()) {
+      WebDriver remoteDriver = WebDriverRunner.getAndCheckWebDriver();
       if (remoteDriver instanceof WrapsDriver) {
         remoteDriver = ((WrapsDriver) remoteDriver).getWrappedDriver();
       }
-
       eyes.open(remoteDriver, APPLICATION_NAME, testName.get(), new RectangleSize(800, 600));
+      eyesWrapper.setOpenRequested(true);
     }
     eyes.check(tag, settings);
   }
@@ -173,6 +138,8 @@ public class BaseTest
     // Set a batch name so all the different browser and mobile combinations are
     // part of the same batch
     sconf.setBatch(batch);
+    sconf.setApiKey(APPLITOOLS_KEY);
+    sconf.setStitchMode(StitchMode.CSS);
 
     // Add Chrome browsers with different Viewports
     sconf.addBrowser(800, 600, BrowserType.CHROME);
