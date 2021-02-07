@@ -1,0 +1,7 @@
+<suite name="Suite1" verbose="1" parallel="methods" thread-count="1" >
+    <test name="Functional">
+        <classes>
+            <class name="applitools.SplunkTest"/>
+        </classes>
+    </test>
+</suite>
