@@ -22,13 +22,13 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.0.0-M5</version>
         <configuration>
-          <parallel>methods</parallel>
-          <threadCount>3</threadCount>
-<!--          <suiteXmlFiles>
+          <!--<parallel>methods</parallel>
+          <threadCount>3</threadCount>-->
+          <suiteXmlFiles>
             <suiteXmlFile>
               src\test\resources\testng.xml
             </suiteXmlFile>
-          </suiteXmlFiles>-->
+          </suiteXmlFiles>
         </configuration>
       </plugin>
     </plugins>

@@ -6,7 +6,7 @@ import com.applitools.eyes.visualgrid.services.RunnerOptions;
 
 public class EyesWrapper
 {
-  private final Eyes eyes;
+  private Eyes eyes;
 
   private final EyesRunner runner;
 
@@ -19,6 +19,10 @@ public class EyesWrapper
 
   public Eyes getEyes() {
     return eyes;
+  }
+
+  public void setEyes(Eyes eyes) {
+    this.eyes = eyes;
   }
 
   public EyesRunner getRunner() {

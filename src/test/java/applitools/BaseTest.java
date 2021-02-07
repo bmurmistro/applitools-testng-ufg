@@ -6,10 +6,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import com.applitools.ICheckSettings;
-import com.applitools.eyes.BatchInfo;
-import com.applitools.eyes.RectangleSize;
-import com.applitools.eyes.StdoutLogHandler;
-import com.applitools.eyes.TestResultsSummary;
+import com.applitools.eyes.*;
 import com.applitools.eyes.selenium.BrowserType;
 import com.applitools.eyes.selenium.Eyes;
 import com.applitools.eyes.selenium.StitchMode;
@@ -44,6 +41,7 @@ public class BaseTest
   //private static EyesWrapper eyesWrapper;
   private static ThreadLocal<EyesWrapper> myEyesWrapper = ThreadLocal.withInitial(() -> {
     Eyes eyes = new Eyes(runner);
+    eyes.setLogHandler(new FileLogger("splunkLog11.txt", true, true));
     eyes.setConfiguration(getConfiguation());
     EyesWrapper eyesWrapper = new EyesWrapper(eyes, runner);
 

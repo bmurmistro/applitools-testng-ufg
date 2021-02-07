@@ -20,13 +20,13 @@ public class HolidayHackathonTest extends BaseTest
   public void testFilter() throws InterruptedException {
     open("https://demo.applitools.com/tlcHackathonMasterV1.html");
 
-    $(By.id("colors__Black")).click();
-    $(By.id("filterBtn")).click();
+    //$(By.id("colors__Black")).click();
+    //$(By.id("filterBtn")).click();
 
     eyesCheck(Target.window().fully());
   }
 
-  @Test
+/*  @Test
   public void testNoOp() throws InterruptedException {
-  }
+  }*/
 }
