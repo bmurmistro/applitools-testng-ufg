@@ -1,4 +1,4 @@
-<suite name="Suite1" verbose="1" parallel="methods" thread-count="1" >
+<suite name="Suite1" verbose="1" parallel="methods" thread-count="2" >
     <test name="Functional">
         <classes>
             <class name="applitools.SplunkTest"/>

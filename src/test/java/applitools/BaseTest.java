@@ -12,6 +12,8 @@ import com.applitools.eyes.selenium.Eyes;
 import com.applitools.eyes.selenium.StitchMode;
 import com.applitools.eyes.selenium.fluent.Target;
 import com.applitools.eyes.visualgrid.model.DeviceName;
+import com.applitools.eyes.visualgrid.model.IosDeviceInfo;
+import com.applitools.eyes.visualgrid.model.IosDeviceName;
 import com.applitools.eyes.visualgrid.services.VisualGridRunner;
 import com.codeborne.selenide.Configuration;
 import com.codeborne.selenide.WebDriverRunner;
@@ -19,9 +21,7 @@ import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WrapsDriver;
 import org.testng.ITestContext;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.AfterSuite;
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.*;
 
 public class BaseTest
 {
@@ -42,7 +42,7 @@ public class BaseTest
   private static ThreadLocal<EyesWrapper> myEyesWrapper = ThreadLocal.withInitial(() -> {
     Eyes eyes = new Eyes(runner);
     eyes.setLogHandler(new FileLogger("splunkLog11.txt", true, true));
-    eyes.setConfiguration(getConfiguation());
+    //eyes.setConfiguration(getConfiguation());
     EyesWrapper eyesWrapper = new EyesWrapper(eyes, runner);
 
     return eyesWrapper;
@@ -58,9 +58,34 @@ public class BaseTest
   }
 
   private static ThreadLocal<String> testName = new ThreadLocal<>();
+  private String environmentType;
+  private Integer width;
+  private Integer height;
+
 
   public EyesWrapper getEyesWrapper() {
     return myEyesWrapper.get();
+  }
+
+  private static Object[][] environments = new Object[][] {
+            new Object[] { "Desktop", 1480, 1200 },
+            new Object[] { "Tablet", 768, 1024 },
+            new Object[] { "Mobile", 375, 812 }
+    };
+
+  @DataProvider(name = "environments")
+  public static Object[][] getEnvironments() {
+    return environments;
+  }
+
+  @Factory (dataProvider="environments")
+  public BaseTest(String type, int width, int height){
+    this.environmentType = type;
+    this.width = width;
+    this.height = height;
+    System.out.println(type);
+    System.out.println(width);
+    System.out.println(height);
   }
 
   @BeforeMethod
@@ -101,7 +126,7 @@ public class BaseTest
     driver.quit();
   }
 
-  public void eyesCheck(ICheckSettings settings) {
+  public void eyesCheck(ICheckSettings settings) throws InterruptedException {
     eyesCheck(null, settings);
   }
 
@@ -110,26 +135,29 @@ public class BaseTest
    *
    * @param tag or step name of the validation
    */
-  public void eyesCheck(String tag, ICheckSettings settings) {
+  public void eyesCheck(String tag, ICheckSettings settings) throws InterruptedException {
     EyesWrapper eyesWrapper = getEyesWrapper();
     Eyes eyes = eyesWrapper.getEyes();
-
+    eyes.setConfiguration(getConfiguation(environmentType));
     if (!eyesWrapper.isOpenRequested()) {
       WebDriver remoteDriver = WebDriverRunner.getAndCheckWebDriver();
       if (remoteDriver instanceof WrapsDriver) {
         remoteDriver = ((WrapsDriver) remoteDriver).getWrappedDriver();
       }
-      eyes.open(remoteDriver, APPLICATION_NAME, testName.get(), new RectangleSize(800, 600));
+      eyes.open(remoteDriver, APPLICATION_NAME, testName.get(), new RectangleSize(width, height));
       eyesWrapper.setOpenRequested(true);
     }
+    Thread.sleep(8000);
+    ((JavascriptExecutor)driver).executeScript("var currScrollPosition = 0; var interval = setInterval(function() {let scrollPosition = document.documentElement.scrollTop;currScrollPosition += 300;window.scrollTo(0, currScrollPosition);if (scrollPosition === document.documentElement.scrollTop) {clearInterval(interval);window.scrollTo(0,0);}},100);var el = document.getElementsByClassName('drift-frame-controller'); if (el && el[0]) { el[0].style.display = 'none'} ; el = document.getElementById('onetrust-banner-sdk'); if (el) { el.style.display = 'none'; }");
+    Thread.sleep(5000);
     eyes.check(tag, settings);
   }
 
-  public void eyesCheck() {
+  public void eyesCheck() throws InterruptedException {
     eyesCheck(Target.window());
   }
 
-  private static com.applitools.eyes.selenium.Configuration getConfiguation() {
+  private com.applitools.eyes.selenium.Configuration getConfiguation(String environmentType) {
     com.applitools.eyes.selenium.Configuration sconf = new com.applitools.eyes.selenium.Configuration();
 
 
@@ -138,38 +166,19 @@ public class BaseTest
     sconf.setBatch(batch);
     sconf.setApiKey(APPLITOOLS_KEY);
     sconf.setStitchMode(StitchMode.CSS);
-
-    // Add Chrome browsers with different Viewports
-    sconf.addBrowser(800, 600, BrowserType.CHROME);
-    sconf.addBrowser(700, 500, BrowserType.CHROME);
-    sconf.addBrowser(1200, 800, BrowserType.CHROME);
-    sconf.addBrowser(1600, 1200, BrowserType.CHROME);
-    sconf.addBrowser(700, 800, BrowserType.CHROME);
-    sconf.addBrowser(800, 700, BrowserType.CHROME);
-    sconf.addBrowser(1200, 900, BrowserType.CHROME);
-    sconf.addBrowser(1600, 1000, BrowserType.CHROME);
-
-    // Add Firefox browser with different Viewports
-    sconf.addBrowser(800, 600, BrowserType.FIREFOX);
-    sconf.addBrowser(700, 500, BrowserType.FIREFOX);
-    sconf.addBrowser(1200, 800, BrowserType.FIREFOX);
-    sconf.addBrowser(1600, 1200, BrowserType.FIREFOX);
-    sconf.addBrowser(700, 800, BrowserType.FIREFOX);
-    sconf.addBrowser(800, 700, BrowserType.FIREFOX);
-    sconf.addBrowser(1200, 900, BrowserType.FIREFOX);
-    sconf.addBrowser(1600, 1000, BrowserType.FIREFOX);
-
-    sconf.addBrowser(1600, 1200, BrowserType.IE_11);
-    sconf.addBrowser(800, 600, BrowserType.IE_10);
-
-    sconf.addBrowser(800, 600, BrowserType.EDGE_CHROMIUM);
-
-    sconf.addBrowser(800, 600, BrowserType.SAFARI);
-    sconf.addBrowser(800, 600, BrowserType.SAFARI_TWO_VERSIONS_BACK);
-
-    // Add iPhone 4 device emulation
-    sconf.addDeviceEmulation(DeviceName.iPad_Mini);
-
+    if (environmentType.equalsIgnoreCase("desktop")) {
+      // Add Chrome browsers with different Viewports
+      sconf.addBrowser(1480, 1200, BrowserType.CHROME);
+      sconf.addBrowser(1480, 1200, BrowserType.FIREFOX);
+      sconf.addBrowser(1480, 1200, BrowserType.EDGE_CHROMIUM);
+      sconf.addBrowser(1480, 1200, BrowserType.SAFARI);
+    }
+    else if (environmentType.equalsIgnoreCase("tablet")) {
+      sconf.addBrowser(new IosDeviceInfo(IosDeviceName.iPad_7));
+    }
+    else {
+      sconf.addBrowser(new IosDeviceInfo(IosDeviceName.iPhone_X));
+    }
     return sconf;
   }
 }
